@@ -1,41 +1,54 @@
 #! /usr/bin/python2
 # -*- coding: utf-8 -*-
 """
+
 """
 __author__ = "xero"
 __email__ = "volleyp7689@gmail.com"
 
 import os
 import re
-import time
-import random
-import threading
+import abc
 
-from twsec.settings.config import ENCODE, DECODE, DATA_DIR, FILE_EXTENSION
-from twsec.settings.config import ENCODE
-import directory
+import sys
+sys.path.append(os.path.abspath('..'))
+
 import connect
 import code
 
 
-def crawl_stock_day_average(stk_no, myear, mmon):
+class TWSEParser(object):
+    """
+    """
+    def __init__(self):
+        try:
+            self.response = code.to_utf8(self.get_http_response())
+        except StopIteration as si:
+            print si.message
+
+    @abc.abstractmethod
+    def get_http_response(self):
+        """Method to get http response,"""
+
+    @abc.abstractmethod
+    def parse_http_tag(self):
+        """Method to parse data inside http tags."""
+
+
+def stock_day_average(stk_no, myear, mmon):
     """
     Generator of stock_day_average data
+    個股日收盤價
     """
     info_flag = 'STOCK_DAY_AVG'
     try:
         """ URL """
-        referer_url = "http://www.twse.com.tw/ch/trading/exchange/STOCK_DAY/STOCK_DAY.php"
+        refer_url = "http://www.twse.com.tw/ch/trading/exchange/STOCK_DAY/STOCK_DAY.php"
         par = {'STK_NO': stk_no, 'myear': myear, 'mmon': mmon}
-        gen_url = connect.twse_gen_url(referer_url, par)
+        gen_url = connect.twse_gen_url(refer_url, par)
         response = connect.get_request(gen_url, info_flag)
 
-        """ """
         response = code.to_utf8(response)
-
-        with open("sda.html", "w") as f:
-            for line in response:
-                f.write(line)
 
         pattern_tr = "<tr bgcolor='#FFFFFF' class='basic2'>(.*?)</tr>"
         pattern_data = '<.*?><.*?>(.*?)<.*?><.*?>'
@@ -44,78 +57,50 @@ def crawl_stock_day_average(stk_no, myear, mmon):
         if not tr:
             return
 
-        sda = {}
+        result = []
         for item in tr:
             data = re.findall(pattern_data, item, re.DOTALL)
-            sda[data[0]] = data[1]
+            result.append([data[0], data[1]])
 
-        print sda
-        return sda
+        print result
+        return result
 
     except StopIteration as se:
         print(se.message)
 
 
-def crawl_bwibbu(date_queue):
-    """ Crawling Thread
+def bwibbu(date):
+    """Crawl Data from bwibbu in one date.
+    :param date:
+    :return:
     """
-    while not date_queue.empty():
-        try:
-            # Get item from date queue
-            date = date_queue.get()
+    try:
+        # Connect to http://www.twse.com.tw/ch/trading/exchange/BWIBBU/BWIBBU_d.php
+        url = 'http://www.twse.com.tw/ch/trading/exchange/BWIBBU/BWIBBU_d.php'
+        par = {'input_date': date}
+        response = connect.post_request(url, par)
 
-            # Check dir and Open file
-            fnl = date.split("/")
-            f_dir = directory.check_dir(DATA_DIR, fnl)  # Path of Dir
-            n = "_".join(fnl) + FILE_EXTENSION  # File name
-            fn = os.path.join(f_dir, n)
-            if os.path.isfile(fn):
-                print "File exists"
-                continue
-            # logging.info(fn)
+        response = code.to_utf8(response)
 
-            # Connect to http://www.twse.com.tw/ch/trading/exchange/BWIBBU/BWIBBU_d.php
-            url = 'http://www.twse.com.tw/ch/trading/exchange/BWIBBU/BWIBBU_d.php'
-            par = {'input_date': date}
-            the_page = connect.post_request(url, par)
+        # Locate target html tag
+        pattern_tb1 = '<tr bgcolor=#FFFFFF>(.*?)</tr>'
+        pattern_data = '<.*?>(.*?)<.*?>'
+        tb1 = re.findall(pattern_tb1, response, re.DOTALL)
 
-            # Convert source page to utf-8
-            src_cp9 = the_page.decode(DECODE)
-            src_utf8 = src_cp9.encode(ENCODE)
+        if not tb1:
+            return
 
-            # Locate target html tag
-            pattern_tb1 = '<tr bgcolor=#FFFFFF>(.*?)</tr>'
-            pattern_data = '<.*?>(.*?)<.*?>'
-            tb1 = re.findall(pattern_tb1, src_utf8, re.DOTALL)
-            if not tb1:
-                continue
+        result = []
+        for security in tb1:
+            data = re.findall(pattern_data, security, re.DOTALL)
+            result.append(data)
 
-            # Open file
-            while True:
-                try:
-                    f = open(fn, "w+")
-                    break
-                except IOError as err:
-                    print err.message
-                    time.sleep(random.random()*10)
-                    continue
+        return result
 
-            # Write to file
-            for security in tb1:
-                data = re.findall(pattern_data, security, re.DOTALL)
-                for item in data:
-                    f.write('%s\t' % item)
-                f.write("\n")
-            f.close()
-            print threading.currentThread().getName() + ": " + fn + " is Done!"
-        except StopIteration as se:
-            print(se.message)
-            continue
-    print threading.currentThread() + " is done!"
+    except StopIteration as se:
+        print(se.message)
 
-
-def unit_test():
-    c = crawl_stock_day_average("1101", "2014", "03")
 
 if __name__ == "__main__":
-    unit_test()
+    print stock_day_average("1101", "2014", "04")
+    print bwibbu("97/07/02")
