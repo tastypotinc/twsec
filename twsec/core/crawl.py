@@ -62,8 +62,7 @@ def stock_day_average(stk_no, myear, mmon):
             data = re.findall(pattern_data, item, re.DOTALL)
             result.append([data[0], data[1]])
 
-        print result
-        return result
+        return result[:-1]  # We don't need month average data.
 
     except StopIteration as se:
         print(se.message)

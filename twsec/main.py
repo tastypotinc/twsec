@@ -14,10 +14,10 @@ sys.path.append(os.path.abspath('..'))  # import package path
 
 # Custom Library
 from core.gendate import get_date_queue, gen_year, gen_month
-from core.crawl import bwibbu
-from twsec.settings.config import DATA_DIR, NUM_OF_THREAD
+from core.crawl import bwibbu, stock_day_average
+from core.directory import check_stock_day_avg_dir
+from twsec.settings.config import NUM_OF_THREAD
 
-from twsec.core.crawl import stock_day_average
 
 date_queue = None
 logger = logging.getLogger("__file__")
@@ -25,8 +25,8 @@ logger = logging.getLogger("__file__")
 
 def crawl_after_trading_data():
     # Initialize data directory
-    if not os.path.isdir(DATA_DIR):
-        os.mkdir(DATA_DIR)
+    #if not os.path.isdir(DATA_DIR):
+    #   os.mkdir(DATA_DIR)
 
     # Initialize date queue
     dq = get_date_queue()
@@ -59,27 +59,29 @@ def crawl_stock_day_avg(stock_no):
             sl.append(stock_day_average(stock_no, y, m))
 
 
-def crawl_1101():
-    stkno = 1101
-    data_list = []
-    for y in range(88, 105):
-        year = gen_year(y)
-        for m in range(1, 13):
-            month = gen_month(m)
-            data_list.append(stock_day_average(stkno, year, month))
-
-    output = ""
-    for every_month in data_list:
-        for data in every_month:
-            date = data[0]
-            price = data[1]
-            output = output + "{}\t{}\n".format(date, price)
-
-    with open("1101_last_price.txt", "a+") as f:
-        f.write(output)
-
-    print output
+def crawl_stock_day():
+    stk_no_list = [no for no in range(1101, 1111)]  # Cement Stock
+    for stkno in stk_no_list:
+        stkno_dir = check_stock_day_avg_dir(stkno)
+        for y in range(88, 105):
+            data_list = []
+            year = gen_year(y)
+            for m in range(1, 13):
+                output_single_month = ""
+                if y == 105 and m > 4:
+                    continue
+                month = gen_month(m)
+                sda = stock_day_average(stkno, year, month)
+                print sda
+                for data in sda:
+                    date = data[0]
+                    price = data[1]
+                    output_single_month = output_single_month + "{}\t{}\n".format(date, price)
+                fn = (os.path.join(stkno_dir, year + "_" + month + ".txt"))
+                with open(fn, "w+") as f:
+                    f.write(output_single_month)
+                data_list.append(data)
 
 
 if __name__ == "__main__":
-    crawl_stock_day_avg('1101')
+    crawl_stock_day()

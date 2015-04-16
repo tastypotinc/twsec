@@ -10,10 +10,6 @@ import os
 #
 FILE_EXTENSION = ".txt"
 
-# Dir
-PROJECT_DIR = os.path.curdir
-DATA_DIR = os.path.join(PROJECT_DIR, "After_Trading_Data_test")
-
 # Thread Configuration
 NUM_OF_THREAD = 1
 
