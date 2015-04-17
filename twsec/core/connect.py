@@ -17,7 +17,7 @@ from twsec.settings.config import TWSE_EXCHANGE
 
 LOG_FILENAME = "connect.log"
 logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
-logger = logging.getLoader(__name__)
+logger = logging.getLogger(__name__)
 
 
 def twse_gen_url(url, args):
