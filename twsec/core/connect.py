@@ -10,8 +10,15 @@ import urllib2
 import time
 import random
 import re
+import logging
+import datetime
 
 from twsec.settings.config import TWSE_EXCHANGE
+
+LOG_FILENAME = "connect.log"
+logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
+logger = logging.getLoader(__name__)
+
 
 def twse_gen_url(url, args):
     """
@@ -44,7 +51,9 @@ def get_request(gen_url, info_flag):
             return response.read()
 
         except urllib2.URLError:
-            print urllib2.URLError
+            now = datetime.datetime.now().ctime()
+            logger.debug("{}:URLERROR:{}".format(now, url))
+            print("URLERROR..Try to reconnect.")
             time.sleep(random.random() * 10)
             continue
 
