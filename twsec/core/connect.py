@@ -48,14 +48,18 @@ def get_request(gen_url, info_flag):
         try:
             url = TWSE_EXCHANGE + "/" + info_flag + "/" + gen_url
             response = urllib2.urlopen(url)
-            return response.read()
-
+            result = response.read()
         except urllib2.URLError:
             now = datetime.datetime.now().ctime()
             logger.debug("{}:URLERROR:{}".format(now, url))
             print("URLERROR..Try to reconnect.")
             time.sleep(random.random() * 10)
             continue
+
+        finally:
+            if response:
+                response.close()
+            return result
 
 
 def post_request(url, req_arg):
